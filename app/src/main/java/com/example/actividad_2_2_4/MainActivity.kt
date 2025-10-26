@@ -3,45 +3,80 @@ package com.example.actividad_2_2_4
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
+import com.example.actividad_2_2_4.navigation.NavigationEvent
+import com.example.actividad_2_2_4.navigation.Screen
+import com.example.actividad_2_2_4.ui.screen.HomeScreen
+import com.example.actividad_2_2_4.ui.screen.ProfileScreen
+import com.example.actividad_2_2_4.ui.screen.SettingsScreen
 import com.example.actividad_2_2_4.ui.theme.Actividad_2_2_4Theme
+import com.example.actividad_2_2_4.viewmodels.MainViewModel
+import kotlinx.coroutines.flow.collectLatest
 
+@OptIn(ExperimentalMaterial3Api::class)
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
         setContent {
             Actividad_2_2_4Theme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    Greeting(
-                        name = "Android",
+
+                //  ViewModel y NavController
+                val viewModel: MainViewModel = viewModel()
+                val navController = rememberNavController()
+
+                //  Escuchar eventos de navegación emitidos por el ViewModel
+                LaunchedEffect(key1 = Unit) {
+                    viewModel.navigationEvents.collectLatest { event ->
+                        when (event) {
+                            is NavigationEvent.NavigateTo -> {
+                                navController.navigate(event.route.route) {
+                                    event.popUpToRoute?.let {
+                                        popUpTo(it.route) {
+                                            inclusive = event.inclusive
+                                        }
+                                    }
+                                    launchSingleTop = event.singleTop
+                                    restoreState = true
+                                }
+                            }
+
+                            is NavigationEvent.PopBackStack -> navController.popBackStack()
+                            is NavigationEvent.NavigateUp -> navController.navigateUp()
+                        }
+                    }
+                }
+
+                //  Layout base con NavHost
+                Scaffold(
+                    modifier = Modifier.fillMaxSize()
+                ) { innerPadding ->
+
+                    NavHost(
+                        navController = navController,
+                        startDestination = Screen.Home.route,
                         modifier = Modifier.padding(innerPadding)
-                    )
+                    ) {
+                        composable(route = Screen.Home.route) {
+                            HomeScreen(navController = navController, viewModel = viewModel)
+                        }
+                        composable(route = Screen.Profile.route) {
+                            ProfileScreen(navController = navController, viewModel = viewModel)
+                        }
+                        composable(route = Screen.Settings.route) {
+                            SettingsScreen(navController = navController, viewModel = viewModel)
+                        }
+                    }
                 }
             }
         }
-    }
-}
-
-@Composable
-fun Greeting(name: String, modifier: Modifier = Modifier) {
-    Text(
-        text = "Hello $name!",
-        modifier = modifier
-    )
-}
-
-@Preview(showBackground = true)
-@Composable
-fun GreetingPreview() {
-    Actividad_2_2_4Theme {
-        Greeting("Android")
     }
 }
